@@ -10,6 +10,7 @@ def load_image(path):
 
 def get_blurred_image_gradients(img):
     img_grey = cv2.cvtColor(np.float32(img), cv2.COLOR_RGB2GRAY)[..., np.newaxis]
+    img_grey = img_grey*1.1
     img_blur = cv2.GaussianBlur(img_grey,(5,5),7)
     Ix = cv2.Sobel(img_blur, cv2.CV_64F, 1, 0, ksize=5)
     Iy = cv2.Sobel(img_blur, cv2.CV_64F, 0, 1, ksize=5)
@@ -20,9 +21,9 @@ def compute_M(img, k=7, std=10):
 
     Ix, Iy = get_blurred_image_gradients(img)
 
-    Ix_2 = cv2.GaussianBlur(Ix * Ix,(k,k),std)
-    Iy_2 = cv2.GaussianBlur(Iy * Iy,(k,k),std)
-    IxIy = cv2.GaussianBlur(Ix * Iy,(k,k),std)
+    Ix_2 = cv2.GaussianBlur(np.multiply(Ix,Ix),(k,k),std)
+    Iy_2 = cv2.GaussianBlur(np.multiply(Iy,Iy),(k,k),std)
+    IxIy = cv2.GaussianBlur(np.multiply(Ix,Iy),(k,k),std)
 
     return np.stack([Ix_2, IxIy, IxIy, Iy_2], axis=2)
 
@@ -43,30 +44,37 @@ def compute_eigenvalues(img, title):
     plt.xlim(eigenvals_array.min(), eigenvals_array.max())
     plt.ylim(eigenvals_array.min(), eigenvals_array.max())
     plt.title(title)
+    plt.xlabel('$\lambda_1$')
+    plt.ylabel('$\lambda_2$')
     plt.show()
 
 
-def display_corners(img, threshold=0.33*1e7, k=7, std=10):
+def display_corners(img, title,threshold=0.4e7, k=7, std=10, alpha=0.05):
     M = compute_M(img, k=k, std=std)
     eigensum = np.zeros((img.shape[0], img.shape[1], 2))
+
+    R_lambda = lambda x1, x2: x1*x2 - alpha*(x1+x2)**2
+    R_threshold = R_lambda(threshold, threshold)
     corner_x = []
     corner_y = []
 
-    eigenvals_list = []
     for i in range(len(img)):
         for j in range(len(img[0])):
             m_matrix = M[i,j].reshape(2,2)
             eigenvals = np.linalg.eigvalsh(m_matrix)
             eigensum[i,j] = eigenvals
-            if (eigenvals > threshold).all():
-                corner_x.append(j)
-                corner_y.append(i)
+
+            R = R_lambda(eigenvals[0], eigenvals[1])
+            if R > R_threshold:
+                corner_x.append(i)
+                corner_y.append(j)
 
     img2 = img.copy()
-    img2[(eigensum[:,:,0] > threshold) & (eigensum[:,:,1] > threshold)] = [255, 255, 0]
-    print(((eigensum[:,:,0] > threshold) & (eigensum[:,:,1] > threshold)).sum())
+    print(len(corner_y))
     plt.imshow(img2)
-    plt.scatter(corner_x, corner_y, s=12, c='r')
+    plt.scatter(corner_y, corner_x, s=12, c='r')
+    plt.title(title)
+    plt.show()
 
 
 
