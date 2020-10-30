@@ -28,8 +28,8 @@ def compute_M(img, k=7, std=10):
     return np.stack([Ix_2, IxIy, IxIy, Iy_2], axis=2)
 
 
-def compute_eigenvalues(img, title):
-    M = compute_M(img)
+def compute_eigenvalues(img, title, k=7, std=10):
+    M = compute_M(img, k=k, std=std)
 
     eigenvals_list = []
     for i in range(len(img)):
@@ -43,18 +43,18 @@ def compute_eigenvalues(img, title):
     plt.scatter(eigenvals_array[:,0], eigenvals_array[:,1])
     plt.xlim(eigenvals_array.min(), eigenvals_array.max())
     plt.ylim(eigenvals_array.min(), eigenvals_array.max())
-    plt.title(title)
+    plt.title('{}, $\sigma=${}'.format(title, std))
     plt.xlabel('$\lambda_1$')
     plt.ylabel('$\lambda_2$')
     plt.show()
 
 
-def display_corners(img, title,threshold=0.4e7, k=7, std=10, alpha=0.05):
+def display_corners(img, title,threshold=0.5, k=7, std=10, alpha=0.05):
     M = compute_M(img, k=k, std=std)
     eigensum = np.zeros((img.shape[0], img.shape[1], 2))
 
     R_lambda = lambda x1, x2: x1*x2 - alpha*(x1+x2)**2
-    R_threshold = R_lambda(threshold, threshold)
+    R_threshold = R_lambda(threshold*1e7, threshold*1e7)
     corner_x = []
     corner_y = []
 
@@ -73,7 +73,7 @@ def display_corners(img, title,threshold=0.4e7, k=7, std=10, alpha=0.05):
     print(len(corner_y))
     plt.imshow(img2)
     plt.scatter(corner_y, corner_x, s=12, c='r')
-    plt.title(title)
+    plt.title('{}, $\sigma=${}, threshold={}$*10^7$'.format(title, std, threshold))
     plt.show()
 
 
